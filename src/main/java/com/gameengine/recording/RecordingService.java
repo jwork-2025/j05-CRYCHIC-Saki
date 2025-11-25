@@ -4,7 +4,6 @@ import com.gameengine.components.TransformComponent;
 import com.gameengine.core.GameObject;
 import com.gameengine.input.InputManager;
 import com.gameengine.scene.Scene;
-
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -101,6 +100,24 @@ public class RecordingService {
             enqueue(sb.toString());
         }
 
+        // 鼠标按键事件（记录按下与位置）
+        try {
+            java.util.List<Integer> mbuttons = new java.util.ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                if (input.isMouseButtonJustPressed(i)) mbuttons.add(i);
+            }
+            if (!mbuttons.isEmpty()) {
+                StringBuilder sbm = new StringBuilder();
+                sbm.append("{\"type\":\"mouse\",\"t\":").append(qfmt.format(elapsed)).append(",\"buttons\":[");
+                for (int i = 0; i < mbuttons.size(); i++) {
+                    if (i > 0) sbm.append(',');
+                    sbm.append(mbuttons.get(i));
+                }
+                sbm.append("],\"x\":").append(qfmt.format(input.getMouseX())).append(",\"y\":").append(qfmt.format(input.getMouseY())).append('}');
+                enqueue(sbm.toString());
+            }
+        } catch (Exception ignored) {}
+
         // sampled deltas placeholder（可扩展）：此处先跳过，保持最小版本
 
         // periodic keyframe（跳过开头暖机，避免空关键帧）
@@ -124,7 +141,7 @@ public class RecordingService {
             float y = tc.getPosition().y;
             if (!first) sb.append(',');
             sb.append('{')
-              .append("\"id\":\"").append(obj.getName()).append("\",")
+              .append("\"id\":\"").append(obj.getName()).append("_").append(obj.getUniqueId()).append("\",")
               .append("\"x\":").append(qfmt.format(x)).append(',')
               .append("\"y\":").append(qfmt.format(y));
 
@@ -152,6 +169,7 @@ public class RecordingService {
             first = false;
             count++;
         }
+        
         sb.append("]}");
         if (count == 0) return false;
         enqueue(sb.toString());
