@@ -4,10 +4,9 @@ import com.gameengine.core.GameEngine;
 import com.gameengine.graphics.IRenderer;
 import com.gameengine.input.InputManager;
 import com.gameengine.math.Vector2;
-import com.gameengine.scene.Scene;
 import com.gameengine.recording.RecordingConfig;
 import com.gameengine.recording.RecordingService;
-
+import com.gameengine.scene.Scene;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +35,7 @@ public class MenuScene extends Scene {
         this.engine = engine;
         this.renderer = engine.getRenderer();
         this.inputManager = InputManager.getInstance();
-        this.selectedIndex = 0;
+        this.selectedIndex = -1;
         this.options = new MenuOption[]{MenuOption.START_GAME, MenuOption.REPLAY, MenuOption.EXIT};
         this.selectionMade = false;
         this.selectedOption = null;
@@ -50,7 +49,8 @@ public class MenuScene extends Scene {
     public void initialize() {
         super.initialize();
         loadReplayFiles();
-        selectedIndex = 0;
+        // 初始不高亮任何按钮，鼠标悬停或按上下键后才高亮
+        selectedIndex = -1;
         selectionMade = false;
         debugFrames = 0;
         
@@ -73,17 +73,19 @@ public class MenuScene extends Scene {
         } else if (inputManager.isKeyJustPressed(40)) {
             selectedIndex = (selectedIndex + 1) % options.length;
         } else if (inputManager.isKeyJustPressed(10) || inputManager.isKeyJustPressed(32)) {
-            selectionMade = true;
-            selectedOption = options[selectedIndex];
-            
-            if (selectedOption == MenuOption.REPLAY) {
-                engine.disableRecording();
-                Scene replay = new ReplayScene(engine, null);
-                engine.setScene(replay);
-            } else if (selectedOption == MenuOption.EXIT) {
-                engine.stop();
-                engine.cleanup();
-                System.exit(0);
+            // 仅在有选中项时响应回车/空格
+            if (selectedIndex >= 0 && selectedIndex < options.length) {
+                selectionMade = true;
+                selectedOption = options[selectedIndex];
+
+                if (selectedOption == MenuOption.REPLAY) {
+                    // 进入回放选择界面（由 ReplayScene 负责列出存档并让用户选择）
+                    switchToReplayScene();
+                } else if (selectedOption == MenuOption.EXIT) {
+                    engine.stop();
+                    engine.cleanup();
+                    System.exit(0);
+                }
             }
         }
         
@@ -101,9 +103,7 @@ public class MenuScene extends Scene {
             } else if (mousePos.y >= buttonY2 - 30 && mousePos.y <= buttonY2 + 30) {
                 selectedIndex = 1;
                 selectedOption = MenuOption.REPLAY;
-                engine.disableRecording();
-                Scene replay = new ReplayScene(engine, null);
-                engine.setScene(replay);
+                switchToReplayScene();
             } else if (mousePos.y >= buttonY3 - 30 && mousePos.y <= buttonY3 + 30) {
                 selectedIndex = 2;
                 selectionMade = true;
@@ -144,7 +144,13 @@ public class MenuScene extends Scene {
         }
     }
     
-    private void switchToReplayScene() {}
+    private void switchToReplayScene() {
+        try {
+            engine.disableRecording();
+        } catch (Exception ignored) {}
+        Scene replay = new ReplayScene(engine, null);
+        engine.setScene(replay);
+    }
     
     @Override
     public void render() {
@@ -181,6 +187,7 @@ public class MenuScene extends Scene {
         renderer.drawRect(centerX - titleWidth / 2.0f - 20, titleY - 40, titleWidth + 40, 80, 0.4f, 0.4f, 0.5f, 1.0f);
         renderer.drawText(titleX, titleY, title, 1.0f, 1.0f, 1.0f, 1.0f);
         
+        Vector2 mousePos = inputManager.getMousePosition();
         for (int i = 0; i < options.length; i++) {
             String text = "";
             if (options[i] == MenuOption.START_GAME) {
@@ -194,22 +201,31 @@ public class MenuScene extends Scene {
             float textWidth = text.length() * 20.0f;
             float textX = centerX - textWidth / 2.0f;
             float textY = centerY - 80.0f + i * 80.0f;
-            
-            float r, g, b;
-            
-            if (i == selectedIndex) {
-                r = 1.0f;
-                g = 1.0f;
-                b = 0.5f;
-                renderer.drawRect(textX - 20, textY - 20, textWidth + 40, 50, 0.6f, 0.5f, 0.2f, 0.9f);
-            } else {
-                r = 0.95f;
-                g = 0.95f;
-                b = 0.95f;
-                renderer.drawRect(textX - 20, textY - 20, textWidth + 40, 50, 0.2f, 0.2f, 0.3f, 0.5f);
+
+            float rectX = textX - 20;
+            float rectY = textY - 20;
+            float rectW = textWidth + 40;
+            float rectH = 50;
+
+            // 检测鼠标是否悬停在按钮上（仅用于视觉变亮）
+            boolean hovered = false;
+            if (mousePos != null) {
+                if (mousePos.x >= rectX && mousePos.x <= rectX + rectW && mousePos.y >= rectY && mousePos.y <= rectY + rectH) {
+                    hovered = true;
+                }
             }
-            
-            renderer.drawText(textX, textY, text, r, g, b, 1.0f);
+
+            // 渲染优先级：悬停 > 键盘选中 > 普通
+            if (hovered) {
+                renderer.drawRect(rectX, rectY, rectW, rectH, 0.75f, 0.65f, 0.25f, 0.95f);
+                renderer.drawText(textX, textY, text, 1.0f, 1.0f, 0.9f, 1.0f);
+            } else if (i == selectedIndex) {
+                renderer.drawRect(rectX, rectY, rectW, rectH, 0.6f, 0.5f, 0.2f, 0.9f);
+                renderer.drawText(textX, textY, text, 1.0f, 1.0f, 0.5f, 1.0f);
+            } else {
+                renderer.drawRect(rectX, rectY, rectW, rectH, 0.2f, 0.2f, 0.3f, 0.5f);
+                renderer.drawText(textX, textY, text, 0.95f, 0.95f, 0.95f, 1.0f);
+            }
         }
         
         String hint1 = "USE ARROWS OR MOUSE TO SELECT, ENTER TO CONFIRM";

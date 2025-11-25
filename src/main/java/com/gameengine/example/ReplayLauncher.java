@@ -23,11 +23,7 @@ public class ReplayLauncher {
             }
         }
 
-        if (path == null) {
-            
-            return;
-        }
-
+        // If no path was provided, start ReplayScene in file-selection mode (path == null)
         GameEngine engine = new GameEngine(1024, 768, "Replay", RenderBackend.GPU);
         ReplayScene replay = new ReplayScene(engine, path);
         engine.setScene(replay);
