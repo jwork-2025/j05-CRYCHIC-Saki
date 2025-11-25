@@ -10,6 +10,12 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
     private float friction;
     private boolean useGravity;
     private Vector2 gravity;
+    private Vector2 lastImpulse;
+    private float impulseTime;
+    private float health;
+    private float maxHealth;
+    private float damageImmunityTimer;
+    
     
     public PhysicsComponent() {
         this.velocity = new Vector2();
@@ -18,6 +24,12 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
         this.friction = 0.9f;
         this.useGravity = false;
         this.gravity = new Vector2(0, 9.8f);
+        this.lastImpulse = new Vector2();
+        this.impulseTime = 0f;
+        this.health = 100f;
+        this.maxHealth = 100f;
+        this.damageImmunityTimer = 0f;
+        
     }
     
     public PhysicsComponent(float mass) {
@@ -42,6 +54,8 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
     public void applyImpulse(Vector2 impulse) {
         if (mass > 0) {
             velocity = velocity.add(impulse.multiply(1.0f / mass));
+            this.lastImpulse = new Vector2(impulse);
+            this.impulseTime = 0.1f;  // 记录冲量持续0.1秒
         }
     }
     
@@ -99,5 +113,65 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
     
     public Vector2 getGravity() {
         return new Vector2(gravity);
+    }
+    
+    public void updateImpulseTimer(float deltaTime) {
+        impulseTime -= deltaTime;
+        if (impulseTime < 0) {
+            impulseTime = 0;
+            lastImpulse = new Vector2();
+        }
+    }
+    
+    public Vector2 getLastImpulse() {
+        return new Vector2(lastImpulse);
+    }
+    
+    public boolean hasRecentImpulse() {
+        return impulseTime > 0;
+    }
+    
+    public void updateImmunityTimer(float deltaTime) {
+        damageImmunityTimer -= deltaTime;
+        if (damageImmunityTimer < 0) {
+            damageImmunityTimer = 0;
+        }
+    }
+    
+    public void takeDamage(float damage) {
+        if (damageImmunityTimer <= 0) {
+            health -= damage;
+            if (health < 0) health = 0;
+            damageImmunityTimer = 0.5f;  // 无敌0.5秒
+        }
+    }
+
+    public void setHealth(float health) {
+        this.health = Math.max(0f, health);
+    }
+
+    public void setMaxHealth(float maxHealth) {
+        this.maxHealth = Math.max(0f, maxHealth);
+        if (this.health > this.maxHealth) this.health = this.maxHealth;
+    }
+    
+    public float getHealth() {
+        return health;
+    }
+    
+    public float getMaxHealth() {
+        return maxHealth;
+    }
+    
+    public float getHealthPercent() {
+        return maxHealth > 0 ? health / maxHealth : 1.0f;
+    }
+    
+    public boolean isDead() {
+        return health <= 0;
+    }
+    
+    public boolean isInvincible() {
+        return damageImmunityTimer > 0;
     }
 }
