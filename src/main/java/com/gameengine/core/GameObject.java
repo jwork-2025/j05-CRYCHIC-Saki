@@ -6,11 +6,14 @@ public class GameObject {
     protected boolean active;
     protected String name;
     protected final List<Component<?>> components;
+    protected static int idCounter = 0;
+    protected final int uniqueId;
     
     public GameObject() {
         this.active = true;
         this.name = "GameObject";
         this.components = new ArrayList<>();
+        this.uniqueId = idCounter++;
     }
     
     public GameObject(String name) {
@@ -93,5 +96,9 @@ public class GameObject {
     
     public void setName(String name) {
         this.name = name;
+    }
+    
+    public int getUniqueId() {
+        return uniqueId;
     }
 }

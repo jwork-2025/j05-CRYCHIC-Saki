@@ -184,6 +184,10 @@ public class GameEngine {
         }
     }
 
+    public com.gameengine.recording.RecordingService getRecordingService() {
+        return this.recordingService;
+    }
+
     public void disableRecording() {
         if (recordingService != null && recordingService.isRecording()) {
             try { recordingService.stop(); } catch (Exception ignored) {}
